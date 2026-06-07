@@ -1,5 +1,5 @@
 import { useState, FormEvent } from "react";
-import { X, Plus, Upload, ShieldCheck, HelpCircle } from "lucide-react";
+import { X, Plus, Upload, ShieldCheck, HelpCircle, Home, Car, Wrench } from "lucide-react";
 import { Listing, CategoryType, ProvinceType } from "../types";
 import { MOZAMBIQUE_PROVINCES } from "../data";
 
@@ -122,13 +122,14 @@ export default function AddListingModal({ onClose, onAddListing }: AddListingMod
                   setCategory("imovel");
                   setPeriod("mês");
                 }}
-                className={`rounded-2xl py-3 border transition-all cursor-pointer ${
+                className={`rounded-2xl py-3 border transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
                   category === 'imovel' 
                     ? 'bg-emerald-50 text-[#00843D] border-brand-green shadow-xs ring-1 ring-brand-green' 
                     : 'bg-[#FAF5EE]/30 text-[#6B665F] border-natural-border'
                 }`}
               >
-                🏠 Imóvel / Quarto
+                <Home className="h-4 w-4" />
+                <span>Imóvel / Quarto</span>
               </button>
               <button
                 type="button"
@@ -136,13 +137,14 @@ export default function AddListingModal({ onClose, onAddListing }: AddListingMod
                   setCategory("veiculo");
                   setPeriod("dia");
                 }}
-                className={`rounded-2xl py-3 border transition-all cursor-pointer ${
+                className={`rounded-2xl py-3 border transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
                   category === 'veiculo' 
                     ? 'bg-indigo-50 text-indigo-700 border-indigo-500 shadow-xs ring-1 ring-indigo-500' 
                     : 'bg-[#FAF5EE]/30 text-[#6B665F] border-natural-border'
                 }`}
               >
-                🚗 Carro / 4x4
+                <Car className="h-4 w-4" />
+                <span>Carro / 4x4</span>
               </button>
               <button
                 type="button"
@@ -150,13 +152,14 @@ export default function AddListingModal({ onClose, onAddListing }: AddListingMod
                   setCategory("equipamento");
                   setPeriod("dia");
                 }}
-                className={`rounded-2xl py-3 border transition-all cursor-pointer ${
+                className={`rounded-2xl py-3 border transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
                   category === 'equipamento' 
                     ? 'bg-brand-yellow/10 text-[#B45309] border-brand-yellow shadow-xs ring-1 ring-brand-yellow/50' 
                     : 'bg-[#FAF5EE]/30 text-[#6B665F] border-natural-border'
                 }`}
               >
-                🛠️ Máquina / Salão
+                <Wrench className="h-4 w-4" />
+                <span>Máquina / Salão</span>
               </button>
             </div>
           </div>

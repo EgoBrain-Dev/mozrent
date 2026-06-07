@@ -1,19 +1,37 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, Send, Sparkles, X, ChevronDown, RefreshCw, AlertCircle } from "lucide-react";
+import { MessageSquare, Send, Sparkles, X, ChevronDown, RefreshCw, AlertCircle, Headphones, Home, ShieldCheck, HelpCircle, Droplet } from "lucide-react";
 import { ChatMessage, Listing } from "../types";
 
 interface AIAssistantProps {
   currentPropertyContext?: Listing | null;
   onSelectPropertyId?: (id: string) => void;
+  chatPrefill?: string | null;
+  onClearPrefill?: () => void;
 }
 
-export default function AIAssistant({ currentPropertyContext, onSelectPropertyId }: AIAssistantProps) {
+function cleanTextContent(text: string): string {
+  if (!text) return "";
+  // 1. Remove heading symbols like "### " or "## " or "# " at the beginning of lines
+  let cleaned = text.replace(/^#+\s+/gm, "");
+  // 2. Replace bullet marks like "* " or "- " with "• " at the beginning of lines
+  cleaned = cleaned.replace(/^(\s*)[*+-]\s+/gm, "$1• ");
+  // 3. Remove single asterisks (italic marks or stray stars) that are not part of a double asterisk (**)
+  cleaned = cleaned.replace(/(?<!\*)\*(?!\*)/g, "");
+  return cleaned;
+}
+
+export default function AIAssistant({ 
+  currentPropertyContext, 
+  onSelectPropertyId,
+  chatPrefill,
+  onClearPrefill
+}: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "msg-welcome",
       role: "assistant",
-      content: "👋 **Olá! Tudo nice?** Eu sou o **Assistente Inteligente MozRent**! \n\nEstou aqui para te ajudar a encontrar os melhores de imóveis, viaturas ou equipamentos em Moçambique. \n\nPodes perguntar-me sobre os bairros de Maputo e Matola, preços de aluguer, como funciona o Credelec e FIPAG ou pedir sugestões de locais seguros. Como te posso ajudar hoje?",
+      content: "**Olá! Tudo nice?** Eu sou o **Assistente Inteligente MozRent**! \n\nEstou aqui para te ajudar a encontrar os melhores de imóveis, viaturas ou equipamentos em Moçambique. \n\nPodes perguntar-me sobre os bairros de Maputo e Matola, preços de aluguer, como funciona o Credelec e FIPAG ou pedir sugestões de locais seguros. Como te posso ajudar hoje?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -44,7 +62,7 @@ export default function AIAssistant({ currentPropertyContext, onSelectPropertyId
           {
             id: contextId,
             role: "assistant",
-            content: `🔍 **Estás a ver este anúncio:** *"${currentPropertyContext.title}"* de **${currentPropertyContext.price.toLocaleString()} MT/${currentPropertyContext.period}** em *${currentPropertyContext.location}*.\n\nQueres que eu analise se o preço é justo para esta zona ou te dê mais detalhes sobre as vossas comodidades?`,
+            content: `**Estás a ver este anúncio:** *"${currentPropertyContext.title}"* de **${currentPropertyContext.price.toLocaleString()} MT/${currentPropertyContext.period}** em *${currentPropertyContext.location}*.\n\nQueres que eu analise se o preço é justo para esta zona ou te dê mais detalhes sobre as vossas comodidades?`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
@@ -103,35 +121,43 @@ export default function AIAssistant({ currentPropertyContext, onSelectPropertyId
     }
   };
 
+  useEffect(() => {
+    if (chatPrefill) {
+      setIsOpen(true);
+      handleSend(chatPrefill);
+      onClearPrefill?.();
+    }
+  }, [chatPrefill]);
+
   const clearChat = () => {
     setMessages([
       {
         id: "msg-welcome-new",
         role: "assistant",
-        content: "🔄 **Conversa reiniciada.** Pergunte-me sobre bairros, transporte local, M-Pesa, Credelec ou qualquer anúncio do MozRent!",
+        content: "**Conversa reiniciada.** Pergunte-me sobre bairros, transporte local, M-Pesa, Credelec ou qualquer anúncio do MozRent!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
   };
 
   const quickPrompts = [
-    { label: "💡 O que é o Credelec?", text: "Explica-me o que é o Credelec e como costuma funcionar nos alugueres em Moçambique." },
-    { label: "🏡 Bairros seguros em Maputo", text: "Quais são as zonas mais seguras e nobres para morar em Maputo e qual a média de preços?" },
-    { label: "🧴 Como evitar fraudes de arrendamento?", text: "Dá-me 4 dicas cruciais para alugar casa em Moçambique em segurança e evitar fraudes com falsos senhorios ou corretores." },
-    { label: "💧 FIPAG e depósitos de água", text: "Por que as casas em Moçambique precisam de tanque subterrâneo ou depósito de água elevado com electrobomba?" }
+    { label: "O que é o Credelec?", text: "Explica-me o que é o Credelec e como costuma funcionar nos alugueres em Moçambique.", type: "help" },
+    { label: "Bairros seguros em Maputo", text: "Quais são as zonas mais seguras e nobres para morar em Maputo e qual a média de preços?", type: "home" },
+    { label: "Como evitar fraudes de arrendamento?", text: "Dá-me 4 dicas cruciais para alugar casa em Moçambique em segurança e evitar fraudes com falsos senhorios ou corretores?", type: "shield" },
+    { label: "FIPAG e depósitos de água", text: "Por que as casas em Moçambique precisam de tanque subterrâneo ou depósito de água elevado com electrobomba?", type: "water" }
   ];
 
   return (
     <>
-      {/* Absolute floating toggle button in gold and green representing warmth/flag */}
+      {/* Absolute floating toggle button in gold and green representing warmth/flag with Headphones icon */}
       <button
         id="ai-helper-toggle-button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#00843D] via-brand-yellow to-brand-red font-medium text-white shadow-xl transition-all hover:scale-105 active:scale-95 duration-300 cursor-pointer"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#007A33] via-[#FCD116] to-[#E31B23] font-medium text-white shadow-xl transition-all hover:scale-105 active:scale-95 duration-300 cursor-pointer"
         title="Assistente de Inteligência Artificial MozRent"
       >
-        <Sparkles className="h-6 w-6 animate-pulse text-white" />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4 rounded-full bg-brand-red">
+        <Headphones className="h-6 w-6 animate-pulse text-white" />
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 rounded-full bg-[#E31B23]">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
         </span>
       </button>
@@ -207,7 +233,7 @@ export default function AIAssistant({ currentPropertyContext, onSelectPropertyId
                     }`}
                   >
                     <div className="prose prose-sm dark:prose-invert break-words">
-                      {msg.content.split('\n\n').map((para, i) => (
+                      {cleanTextContent(msg.content).split('\n\n').map((para, i) => (
                         <p key={i} className="mb-2 last:mb-0">
                           {para.split('**').map((item, index) => {
                             // Dumb markdown bold parsing helper
@@ -261,9 +287,13 @@ export default function AIAssistant({ currentPropertyContext, onSelectPropertyId
                     <button
                       key={i}
                       onClick={() => handleSend(qp.text)}
-                      className="text-left w-full text-xs font-bold bg-[#FAF5EE] hover:bg-[#FDF8F1] text-brand-black border border-natural-border px-3.5 py-3 rounded-xl transition-all shadow-xs cursor-pointer"
+                      className="text-left w-full text-xs font-bold bg-[#FAF5EE] hover:bg-[#FDF8F1] text-brand-black border border-natural-border px-3.5 py-3 rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
                     >
-                      {qp.label}
+                      {qp.type === "help" && <HelpCircle className="h-4 w-4 text-brand-green flex-shrink-0" />}
+                      {qp.type === "home" && <Home className="h-4 w-4 text-amber-500 flex-shrink-0" />}
+                      {qp.type === "shield" && <ShieldCheck className="h-4 w-4 text-[#E31B23] flex-shrink-0" />}
+                      {qp.type === "water" && <Droplet className="h-4 w-4 text-sky-500 flex-shrink-0" />}
+                      <span>{qp.label}</span>
                     </button>
                   ))}
                 </div>

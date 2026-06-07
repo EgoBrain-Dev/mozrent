@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef, useEffect } from "react";
 import { X, ShieldCheck, MapPin, Phone, MessageSquare, Star, Users, Calendar, AlertTriangle, ArrowRight, ShieldAlert, CreditCard, Sparkles, Upload } from "lucide-react";
 import { Listing, RentBooking } from "../types";
 
@@ -6,11 +6,137 @@ interface ListingDetailsModalProps {
   listing: Listing;
   onClose: () => void;
   onBook: (booking: Omit<RentBooking, "id" | "createdAt" | "status">) => void;
+  onRateListing?: (id: string, newRating: number) => void;
 }
 
-export default function ListingDetailsModal({ listing, onClose, onBook }: ListingDetailsModalProps) {
+export default function ListingDetailsModal({ listing, onClose, onBook, onRateListing }: ListingDetailsModalProps) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  
+  // Interactive star rating states
+  const [hoveredStars, setHoveredStars] = useState<number>(0);
+  const [userStars, setUserStars] = useState<number>(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingSuccess, setRatingSuccess] = useState(false);
+
+  // Landlord direct chat states
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: 'user' | 'landlord', content: string, timestamp: string}[]>([
+    {
+      role: 'landlord',
+      content: `Olá! Sou o(a) ${listing.landlordName}, proprietário deste anúncio: "${listing.title}". Tem alguma dúvida sobre o preço de ${listing.price.toLocaleString()} MT ou quer negociar as condições? Escreva a sua proposta e vamos "txunar" isso!`,
+      timestamp: new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll chat
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, chatOpen]);
+
+  // Clean raw AI response for landlords as requested (removing ###, * and formatting noise)
+  const cleanResponseText = (text: string) => {
+    return text
+      .replace(/###\s+/g, "")
+      .replace(/##\s+/g, "")
+      .replace(/#\s+/g, "")
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .trim();
+  };
+
+  // Chat negotiation submit
+  const handleSendNegotiation = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userText = chatInput.trim();
+    setChatInput("");
+    
+    const userMsg = {
+      role: 'user' as const,
+      content: userText,
+      timestamp: new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatLoading(true);
+
+    try {
+      // Mapping message states to conform to expected history array structure
+      const msgHistory = chatMessages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        content: m.content
+      }));
+      msgHistory.push({ role: 'user', content: userText });
+
+      const response = await fetch("/api/negotiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: msgHistory,
+          listing,
+          tenantName: tenantName || "Cliente"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro de servidor ao contactar o anunciante.");
+      }
+
+      const resData = await response.json();
+      const rawText = resData.text || "Estou a processar. Um segundo, por favor...";
+      const processedText = cleanResponseText(rawText);
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'landlord' as const,
+          content: processedText,
+          timestamp: new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } catch (err) {
+      console.error(err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'landlord' as const,
+          content: "Peço desculpa, tive uma pequena falha de rede aqui na Matola. Podes repetir a proposta, por favor? Kanimambo!",
+          timestamp: new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Star Rating submit handler
+  const handleRateSubmit = async (stars: number) => {
+    if (ratingLoading) return;
+    setUserStars(stars);
+    setRatingLoading(true);
+    
+    // Simulate API delay and call onRateListing
+    setTimeout(() => {
+      // Calculate new weighted rating
+      const numericRating = listing.rating || 0;
+      const count = listing.views > 2 ? 5 : 3; // Estimated multiplier
+      const newCalcRating = Number(((numericRating * count + stars) / (count + 1)).toFixed(1));
+
+      if (onRateListing) {
+        onRateListing(listing.id, newCalcRating);
+      }
+      setRatingLoading(false);
+      setRatingSuccess(true);
+    }, 1000);
+  };
   
   // Booking Form States
   const [tenantName, setTenantName] = useState("");
@@ -267,9 +393,51 @@ export default function ListingDetailsModal({ listing, onClose, onBook }: Listin
                 <span className="text-[#6B665F] text-xs"> /{listing.period === 'mês' ? 'mês' : 'dia'}</span>
               </div>
               <div className="flex items-center gap-1 text-xs text-amber-600 bg-white px-2.5 py-1.5 rounded-xl border border-natural-border font-bold shadow-xs">
-                <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                <Star className="h-4 w-4 fill-[#FCD116] text-[#FCD116]" />
                 <span>{listing.rating.toFixed(1)} de 5</span>
               </div>
+            </div>
+
+            {/* Interactive Star Rating Inside the Listing */}
+            <div className="rounded-2xl border border-dashed border-[#007A33]/25 bg-[#007A33]/5 p-3.5 text-center">
+              <span className="text-[10px] text-[#007A33] font-black uppercase tracking-wider block mb-1">
+                Avalie este Anúncio (Avaliação por Estrelas)
+              </span>
+              {ratingSuccess ? (
+                <div className="text-xs text-[#007A33] font-bold py-1">
+                  Kanimambo! A sua classificação ({userStars} ★) foi submetida com sucesso!
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1.5">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((stars) => {
+                      const isActive = hoveredStars >= stars || userStars >= stars;
+                      return (
+                        <button
+                          key={stars}
+                          type="button"
+                          disabled={ratingLoading}
+                          onClick={() => handleRateSubmit(stars)}
+                          onMouseEnter={() => setHoveredStars(stars)}
+                          onMouseLeave={() => setHoveredStars(0)}
+                          className="p-0.5 transition-transform hover:scale-120 focus:outline-none cursor-pointer"
+                        >
+                          <Star
+                            className={`h-6 w-6 transition-all ${
+                              isActive
+                                ? "fill-[#FCD116] text-[#FCD116]"
+                                : "text-neutral-300"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[9px] text-neutral-500 font-medium">
+                    {ratingLoading ? "A registar o seu voto..." : "Clique nas estrelas acima para classificar"}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Property parameters if any */}
@@ -324,7 +492,7 @@ export default function ListingDetailsModal({ listing, onClose, onBook }: Listin
             </div>
 
             {/* Landlord meta box */}
-            <div className="rounded-2xl border border-natural-border bg-[#FDF8F1] p-4">
+            <div className="rounded-2xl border border-natural-border bg-[#FDF8F1] p-4 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-brand-yellow text-brand-black font-extrabold text-sm flex items-center justify-center">
                   {listing.landlordName.charAt(0)}
@@ -335,25 +503,91 @@ export default function ListingDetailsModal({ listing, onClose, onBook }: Listin
                   <span className="text-[10px] text-[#6B665F] block mt-0.5">{listing.landlordPhone}</span>
                 </div>
 
-                {/* Secure WhatsApp launcher link */}
-                <a 
-                  href={listing.landlordWhatsApp}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00843D] hover:bg-emerald-800 text-white shadow transition-all hover:scale-110 active:scale-95"
-                  title="Conversar direto no WhatsApp"
+                {/* Direct Landlord Negotiation Chat Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(!chatOpen)}
+                  className="flex h-10 px-3.5 items-center justify-center gap-1 rounded-full bg-[#00843D] hover:bg-emerald-800 text-white shadow transition-all active:scale-95 text-xs font-black cursor-pointer"
+                  title="Negociar Preço"
                 >
-                  <MessageSquare className="h-5 w-5" />
-                </a>
-                
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{chatOpen ? "Fechar" : "Negociar"}</span>
+                </button>
+
                 <a 
                   href={`tel:${listing.landlordPhone}`}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-yellow hover:bg-amber-500 text-brand-black shadow transition-all hover:scale-110 active:scale-95"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-yellow hover:bg-amber-500 text-brand-black shadow transition-all hover:scale-110 active:scale-95 animate-pulse"
                   title="Telefonar Directo"
                 >
                   <Phone className="h-5 w-5" />
                 </a>
               </div>
+
+              {/* Collapsed Landlord negotiation chat block */}
+              {chatOpen && (
+                <div className="mt-2.5 pt-3 border-t border-[#6B665F]/15 text-left space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#007A33]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#007A33] animate-ping"></span>
+                      Chat Direto de Negociação
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => setChatOpen(false)}
+                      className="text-[10px] text-[#E31B23] hover:underline font-bold cursor-pointer"
+                    >
+                      Voltar
+                    </button>
+                  </div>
+
+                  {/* Messages Feed */}
+                  <div className="h-[210px] overflow-y-auto rounded-xl bg-white border border-natural-border p-2.5 space-y-2 text-xs">
+                    {chatMessages.map((msg, i) => {
+                      const isLandlord = msg.role === 'landlord';
+                      return (
+                        <div key={i} className={`flex flex-col ${isLandlord ? 'items-start' : 'items-end'}`}>
+                          <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${
+                            isLandlord 
+                              ? 'bg-neutral-100 text-neutral-800 rounded-tl-none border border-neutral-200' 
+                              : 'bg-[#00843D] text-white rounded-tr-none shadow-xs'
+                          }`}>
+                            <p className="leading-relaxed whitespace-pre-line">{msg.content}</p>
+                          </div>
+                          <span className="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">{msg.timestamp}</span>
+                        </div>
+                      );
+                    })}
+                    {chatLoading && (
+                      <div className="flex items-center gap-1.5 p-1 text-[10px] text-neutral-500 font-semibold italic">
+                        <span className="h-1.5 w-1.5 bg-[#00843D] rounded-full animate-bounce"></span>
+                        <span className="h-1.5 w-1.5 bg-[#00843D] rounded-full animate-bounce delay-100"></span>
+                        <span className="h-1.5 w-1.5 bg-[#00843D] rounded-full animate-bounce delay-200"></span>
+                        <span>{listing.landlordName} está a responder...</span>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* Message Input box */}
+                  <form onSubmit={handleSendNegotiation} className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ex: Faz desconto de 10% se fechar já?"
+                      disabled={chatLoading}
+                      className="flex-1 rounded-xl border border-natural-border bg-white px-3 py-1.5 text-xs focus:ring-1 focus:ring-brand-green focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={chatLoading || !chatInput.trim()}
+                      className="rounded-xl bg-[#00843D] hover:bg-emerald-800 disabled:opacity-45 text-white font-black text-xs px-3.5 py-1.5 transition-all cursor-pointer"
+                    >
+                      Enviar
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
 
           </div>
@@ -379,14 +613,23 @@ export default function ListingDetailsModal({ listing, onClose, onBook }: Listin
                 </button>
               </div>
             ) : !showBookingForm ? (
-              <button
-                id="rent-now-button"
-                onClick={() => setShowBookingForm(true)}
-                className="w-full bg-[#00843D] hover:bg-emerald-800 text-white font-extrabold rounded-full py-4 text-sm transition-all flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.01] cursor-pointer"
-              >
-                <span>Alugar Agora com Segurança</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              listing.availableNow ? (
+                <button
+                  id="rent-now-button"
+                  onClick={() => setShowBookingForm(true)}
+                  className="w-full bg-[#00843D] hover:bg-emerald-800 text-white font-extrabold rounded-full py-4 text-sm transition-all flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.01] cursor-pointer"
+                >
+                  <span>Alugar Agora com Segurança</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <div id="listing-rented-warning" className="w-full bg-[#E31B23]/10 border border-[#E31B23]/30 rounded-2xl p-4 text-center">
+                  <p className="text-sm font-bold text-[#E31B23] uppercase tracking-wide">Indisponível • Alugado</p>
+                  <p className="text-xs text-neutral-600 mt-1 leading-normal">
+                    Este item já se encontra arrendado de momento por outro inquilino do MozRent. Pode voltar mais tarde ou procurar artigos semelhantes no catálogo.
+                  </p>
+                </div>
+              )
             ) : (
               <form onSubmit={handleBookingSubmit} className="space-y-3.5 bg-natural-aside p-4 rounded-2xl border border-natural-border">
                 <div className="flex items-center justify-between">

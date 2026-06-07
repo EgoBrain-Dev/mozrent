@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "Listing": {
+      "title": "Listing",
+      "description": "A property, vehicle, or equipment available for rent.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string" },
+        "price": { "type": "number" },
+        "period": { "type": "string" },
+        "location": { "type": "string" },
+        "province": { "type": "string" },
+        "rooms": { "type": "number" },
+        "bathrooms": { "type": "number" },
+        "spaceArea": { "type": "string" },
+        "image": { "type": "string" },
+        "gallery": { "type": "array" },
+        "features": { "type": "array" },
+        "landlordName": { "type": "string" },
+        "landlordPhone": { "type": "string" },
+        "landlordWhatsApp": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "views": { "type": "number" },
+        "rating": { "type": "number" },
+        "availableNow": { "type": "boolean" },
+        "allowCredelecRefund": { "type": "boolean" },
+        "stock": { "type": "number" }
+      },
+      "required": ["id", "title", "description", "category", "type", "price", "period", "location", "province", "image", "landlordName", "landlordPhone", "landlordWhatsApp", "verified", "featured", "views", "rating", "availableNow"]
+    },
+    "RentBooking": {
+      "title": "RentBooking",
+      "description": "An active or pending rental agreement.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "listingTitle": { "type": "string" },
+        "listingImage": { "type": "string" },
+        "price": { "type": "number" },
+        "period": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "userIdentity": { "type": "string" },
+        "documentType": { "type": "string" },
+        "documentFile": { "type": "string" },
+        "startDate": { "type": "string" },
+        "duration": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "mpesaNumber": { "type": "string" },
+        "visaCardNumber": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "expiresAt": { "type": "number" }
+      },
+      "required": ["id", "listingId", "listingTitle", "listingImage", "price", "period", "userName", "userPhone", "userIdentity", "documentType", "startDate", "duration", "paymentMethod", "status", "createdAt"]
+    },
+    "UserFeedback": {
+      "title": "UserFeedback",
+      "description": "Client review and evaluation of the MozRent service.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "rating", "comment", "createdAt"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "System settings and terms and conditions.",
+      "type": "object",
+      "properties": {
+        "taxPercentage": { "type": "number" },
+        "termsText": { "type": "string" },
+        "allowSelfRegistration": { "type": "boolean" },
+        "minBookingDuration": { "type": "number" }
+      },
+      "required": ["taxPercentage", "termsText", "allowSelfRegistration", "minBookingDuration"]
+    }
+  },
+  "firestore": {
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Listing records"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "RentBooking",
+      "description": "Booking contracts"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "UserFeedback",
+      "description": "Service reviews"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "System operational configurations"
+    }
+  }
+}

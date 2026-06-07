@@ -7,18 +7,19 @@ interface BookingDashboardModalProps {
   onClose: () => void;
   onUpdateStatus: (id: string, status: 'Pendente' | 'Confirmado' | 'Rejeitado', ref?: string) => void;
   onExtendBooking: (id: string, extraDuration: number) => void;
-  onSimulateTimePassage: () => void;
 }
 
 export default function BookingDashboardModal({ 
   bookings, 
   onClose, 
   onUpdateStatus,
-  onExtendBooking,
-  onSimulateTimePassage
+  onExtendBooking
 }: BookingDashboardModalProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [trxCodes, setTrxCodes] = useState<Record<string, string>>({});
+  const [notificationPermission, setNotificationPermission] = useState<string>(
+    "Notification" in window ? Notification.permission : "unsupported"
+  );
 
   // Renewal form interactive state
   const [activeRenewalId, setActiveRenewalId] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function BookingDashboardModal({
     const daysRemaining = Math.ceil(timeLeftMs / (1000 * 60 * 60 * 24));
 
     if (daysRemaining > 1) {
-      alert(`⚠️ Economia de Saldo MozRent: Ainda tem ${daysRemaining} dias de contrato activo para este item!\n\nSó permitimos efectuar pagamentos de renovação quando restarem menos de 24 horas (1 dia) para expirar. Assim evita gastos desnecessários ou acumulações acidentais.`);
+      alert(`Aviso de Economia de Saldo MozRent: Ainda tem ${daysRemaining} dias de contrato activo para este item!\n\nSó permitimos efectuar pagamentos de renovação quando restarem menos de 24 horas (1 dia) para expirar. Assim evita gastos desnecessários ou acumulações acidentais.`);
       return;
     }
 
@@ -83,7 +84,7 @@ export default function BookingDashboardModal({
       setActiveRenewalId(null);
       setRenewalPin("");
       setIsRenewing(false);
-      alert(`🎉 Aluguer renovado com sucesso! Foram adicionados +${renewalDuration} ${book.period === 'mês' ? 'meses' : book.period === 'evento' ? 'eventos' : 'dias'} ao seu período total de aluguer. O status e os dias foram atualizados.`);
+      alert(`Aluguer renovado com sucesso! Foram adicionados +${renewalDuration} ${book.period === 'mês' ? 'meses' : book.period === 'evento' ? 'eventos' : 'dias'} ao seu período total de aluguer. O status e os dias foram atualizados.`);
     }, 1800);
   };
 
@@ -116,25 +117,38 @@ export default function BookingDashboardModal({
           </button>
         </div>
 
-        {/* Simulator Acceleration Control Panel */}
-        {bookings.length > 0 && (
-          <div className="mb-4 p-3 bg-amber-50/70 rounded-2xl border border-brand-yellow/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-            <div className="text-left">
-              <span className="text-xs font-bold text-[#B45309] block">🧑‍💻 Modo Demo: Simulação de Passagem de Tempo</span>
-              <span className="text-[10px] text-neutral-600 block mt-0.5">Clique para simular que o tempo passou para ver os avisos de expiração e testar o fluxo de renovação!</span>
-            </div>
-            <button 
-              onClick={onSimulateTimePassage}
-              className="px-3.5 py-1.5 rounded-xl bg-brand-yellow/20 hover:bg-brand-yellow/35 border border-brand-yellow/50 text-[#B45309] text-xs font-bold flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-            >
-              <Clock className="w-3.5 h-3.5 animate-spin-slow" />
-              <span>Avançar Relógio (-10 Dias)</span>
-            </button>
-          </div>
-        )}
-
         {/* Content Flow */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+          {/* Notification Permission Quick Banner */}
+          {"Notification" in window && (
+            <div className="bg-amber-50 border border-amber-200/60 p-3 rounded-2xl flex items-center justify-between text-xs mb-2">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <span className={`flex h-2 w-2 rounded-full ${notificationPermission === "granted" ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`}></span>
+                <span>
+                  {notificationPermission === "granted" ? (
+                    <span className="text-[#007A33] font-bold">🟢 Notificações ativas! Receberá alertas quando o estado mudar.</span>
+                  ) : notificationPermission === "denied" ? (
+                    <span className="text-[#E31B23] font-semibold">🔴 Notificações bloqueadas nas configurações do seu navegador.</span>
+                  ) : (
+                    <span>Deseja receber alertas sonoros/visuais quando o status do seu aluguer mudar?</span>
+                  )}
+                </span>
+              </div>
+              {notificationPermission === "default" && (
+                <button
+                  onClick={() => {
+                    Notification.requestPermission().then(permission => {
+                      setNotificationPermission(permission);
+                    });
+                  }}
+                  className="bg-[#007A33] hover:bg-emerald-800 text-white font-black px-3.5 py-1.5 rounded-full transition-all active:scale-95 text-[10px] cursor-pointer"
+                >
+                  Ativar Alertas
+                </button>
+              )}
+            </div>
+          )}
+
           {bookings.length === 0 ? (
             <div className="py-12 text-center text-[#6B665F] space-y-3">
               <Clock className="h-12 w-12 text-neutral-300 mx-auto" />

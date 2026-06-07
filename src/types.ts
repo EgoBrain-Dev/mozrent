@@ -69,3 +69,20 @@ export interface RentBooking {
   createdAt: string;
   expiresAt?: number; // Simulated timestamp when rental expires (useful for warnings)
 }
+
+export interface UserFeedback {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface AppSettings {
+  taxPercentage: number;
+  termsText: string;
+  allowSelfRegistration: boolean;
+  minBookingDuration: number;
+  adminPin: string;
+}
+
