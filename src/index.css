@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Natural Tones Palette */
+  --color-natural-bg: #FDF8F1;
+  --color-natural-aside: #FAF5EE;
+  --color-natural-border: #E8E2D9;
+  --color-brand-black: #1A1A1A;
+  --color-brand-green: #00843D;
+  --color-brand-yellow: #F7D117;
+  --color-brand-red: #E31B23;
+}
+
+/* Custom Mozambique capulana pattern visual border with Natural Tones */
+.capulana-border {
+  background: repeating-linear-gradient(
+    45deg,
+    #E31B23, /* Red */
+    #E31B23 10px,
+    #00843D 10px, /* Green */
+    #00843D 20px,
+    #F7D117 20px, /* Yellow/Gold */
+    #F7D117 30px,
+    #1A1A1A 30px, /* Black */
+    #1A1A1A 40px
+  );
+}
+
+.capulana-text-gradient {
+  background: linear-gradient(to right, #E31B23, #F7D117, #00843D);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+

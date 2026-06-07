@@ -1,0 +1,10 @@
+{
+  "name": "MozRent",
+  "description": "A melhor plataforma moçambicana de aluguer. Imóveis, viaturas e equipamentos na palma da tua mão. Alugue o que quiser, quando quiser com total segurança, suporte local por M-Pesa/e-Mola e assistência de inteligência artificial.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
